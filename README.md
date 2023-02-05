@@ -28,6 +28,8 @@ Memory - Kingston 16GB KF560C36BBEK2-32 - DDR5
 
 Price: 1061
 
+Combination 2
+
 . . .
 
 ### Search compositon
