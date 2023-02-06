@@ -18,10 +18,14 @@
                 {
                     inp = input.ToLower();
                     Console.WriteLine(store.showComposition(inputs));
+                    //Wait before print the info
+                    Thread.Sleep(1500);
                 }else if (inputs.Length == 1)
                 {
+                    input.Trim();
                     inp = input.ToLower();
                     Console.WriteLine(store.showCompatibles(input));
+                    Thread.Sleep(1500);
                 }
             };
 

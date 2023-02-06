@@ -1,11 +1,13 @@
 ﻿using System.Text;
 using System.Text.Json;
+using System.Linq;
 
 namespace ConsoleApp2;
 
 public class Store
 {
-    private readonly string _path = @"C:\Users\denis\RiderProjects\ConsoleApp2\ConsoleApp2\pc-store-inventory.json" ;
+    private readonly string _path = @"C:\Users\denis\RiderProjects\ConsoleApp2\ConsoleApp2\pc-store-inventory.json";
+
     //Root object
     private readonly Component _component;
 
@@ -15,42 +17,34 @@ public class Store
         _component = JsonSerializer.Deserialize<Component>(
             File.ReadAllText(_path));
     }
-    
+
     /*
      * This method show all possible compositions with the provided Item's Part Number.
      * Throw exception message if one of the components is null.
      */
     public string showCompatibles(string partNumber)
     {
-        CPU cpu = null;
-        Memory memory = null;
-        Motherboard motherboard = null;
-        
         try
         {
-            foreach (var cp in _component.CPUs)
+            CPU cpu = null;
+            Memory memory = null;
+            Motherboard motherboard = null;
+            if (cpu == null)
             {
-                if (cp.PartNumber.Equals(partNumber))
-                {
-                    cpu = cp;
-                }
+                cpu = _component.CPUs.Find(cp => cp.PartNumber.Equals(partNumber));
             }
 
-            foreach (var mem in _component.Memory)
+            if (memory == null)
             {
-                if (mem.PartNumber.Equals(partNumber))
-                {
-                    memory = mem;
-                }
+                memory = _component.Memory.Find(mem => mem.PartNumber.Equals(partNumber));
             }
 
-            foreach (var mb in _component.Motherboards)
+            if (motherboard == null)
             {
-                if (mb.PartNumber.Equals(partNumber))
-                {
-                    motherboard = mb;
-                }
+                motherboard = _component.Motherboards
+                    .Find(mb => mb.PartNumber.Equals(partNumber));
             }
+            
             if (_component.CPUs.Contains(cpu))
             {
                 return search(cpu);
@@ -73,7 +67,7 @@ public class Store
             return e.Message;
         }
     }
-    
+
     /*
      * Show useful information about the Components.
      */
@@ -85,18 +79,18 @@ public class Store
         {
             sb.Append(cpu.PartNumber + "/" + cpu.SupportedMemory + "/" + cpu.Socket + "  ");
         }
+
         sb.AppendLine("\n");
         sb.AppendLine("Memories: ");
         foreach (var memory in _component.Memory)
         {
-            
             sb.Append(memory.PartNumber + "/" + memory.Type + "  ");
         }
+
         sb.AppendLine("\n");
         sb.AppendLine("Motherboards: ");
         foreach (var motherboard in _component.Motherboards)
         {
-            
             sb.Append(motherboard.PartNumber + "/" + motherboard.Socket + "  ");
         }
 
@@ -104,7 +98,7 @@ public class Store
 
         return sb.ToString();
     }
-    
+
     /*
      * With given array of Part Numbers search for items and show the composition
      * if there is not provided right Part Number it will throw exception message.
@@ -113,38 +107,28 @@ public class Store
     {
         try
         {
-            StringBuilder sb = new StringBuilder();
-            CPU cpu = null;
-            Memory memory = null;
-            Motherboard motherboard = null;
-            
+            CPU? cpu = null;
+            Memory? memory = null;
+            Motherboard? motherboard = null;
+
             foreach (var partNumber in partNumbers)
             {
                 string trimed = partNumber.Trim();
-                foreach (var cp in _component.CPUs)
+                if (cpu == null)
                 {
-                    if (cp.PartNumber.Equals(trimed))
-                    {
-                        cpu = cp;
-                    }
+                    cpu = _component.CPUs.Find(cp => cp.PartNumber.Equals(trimed));
                 }
 
-                foreach (var mem in _component.Memory)
+                if (memory == null)
                 {
-                    if (mem.PartNumber.Equals(trimed))
-                    {
-                        memory = mem;
-                    }
+                    memory = _component.Memory.Find(mem => mem.PartNumber.Equals(trimed));
                 }
 
-                foreach (var mb in _component.Motherboards)
+                if (motherboard == null)
                 {
-                    if (mb.PartNumber.Equals(trimed))
-                    {
-                        motherboard = mb;
-                    }
+                    motherboard = _component.Motherboards
+                        .Find(mb => mb.PartNumber.Equals(trimed));
                 }
-
             }
 
             if (cpu == null || memory == null || motherboard == null)
@@ -154,7 +138,7 @@ public class Store
 
             if (cpu.Socket != motherboard.Socket)
             {
-                throw new NotCompatibleException("Motherboard with socket " + motherboard.Socket + 
+                throw new NotCompatibleException("Motherboard with socket " + motherboard.Socket +
                                                  " is not compatible with the CPU");
             }
 
@@ -164,58 +148,41 @@ public class Store
                                                  " is not compatible with the CPU");
             }
 
-            sb.AppendLine(cpu.ToString());
-            sb.AppendLine(memory.ToString());
-            sb.AppendLine(motherboard.ToString());
-            sb.AppendLine("Price: " + 
-                          calculatePrice(cpu.Price, memory.Price,motherboard.Price) 
-                          +"\n");
 
-            return sb.ToString();
+            return cpu.ToString() + "\n" + memory.ToString() + "\n" + motherboard.ToString() + "\n" + "Price: " +
+                   calculatePrice(cpu.Price, memory.Price, motherboard.Price)
+                   + "\n";
         }
         catch (Exception ex)
         {
             return ex.Message;
         }
     }
-    
+
     /*
      * Receive items price as argument.
      * Calculate total price of all provided components price.
      * return double.
      */
-    private double calculatePrice(double cpuPrice,double memPrice,double mbPrice)
+    private double calculatePrice(double cpuPrice, double memPrice, double mbPrice)
     {
         return cpuPrice + memPrice + mbPrice;
     }
-    
+
     //Overload the function search
-    
+
     /*
      * Search for equality between cpu-memory and cpu-motherboard and return all combinations.
      * return string.
      */
     private string search(CPU cpu)
     {
-        List<Memory> memory = new List<Memory>();
-        List<Motherboard> motherboard = new List<Motherboard>();
         StringBuilder sb = new StringBuilder();
 
-        foreach (var mem in _component.Memory)
-        {
-            if (cpu.SupportedMemory.Equals(mem.Type))
-            {
-                memory.Add(mem);
-            }
-        }
-        foreach (var mb in _component.Motherboards)
-        {
-            if (cpu.Socket.Equals(mb.Socket))
-            {
-                motherboard.Add(mb);
-            }
-        }
-
+       var memory = _component.Memory.FindAll(mem => cpu.SupportedMemory.Equals(mem.Type)).ToList();
+       var motherboard = _component.Motherboards.FindAll(mb 
+           => cpu.Socket.Equals(mb.Socket)).ToList();
+       
         int comb = 0;
         int num = 0;
         foreach (var mem in memory)
@@ -227,37 +194,24 @@ public class Store
                 sb.AppendLine(cpu.ToString() + " ");
                 sb.AppendLine(mb.ToString() + " ");
                 sb.AppendLine(mem.ToString());
-                sb.AppendLine("Price: " + calculatePrice(cpu.Price, mem.Price, mb.Price) +"\n");
+                sb.AppendLine("Price: " + calculatePrice(cpu.Price, mem.Price, mb.Price) + "\n");
                 comb++;
             }
         }
-        
-        return "There are "+ comb + " possible combinations:\n" + sb.ToString();
+
+        return "There are " + comb + " possible combinations:\n" + sb.ToString();
     }
 
     private string search(Memory memory)
     {
-        List<CPU> cpu = new List<CPU>();
         List<Motherboard> motherboard = new List<Motherboard>();
         StringBuilder sb = new StringBuilder();
-
-        foreach (var cp in _component.CPUs)
-        {
-            if (memory.Type.Equals(cp.SupportedMemory))
-            {
-                cpu.Add(cp);
-            }
-        }
-
+        
+        var cpu = _component.CPUs.FindAll(cp => cp.SupportedMemory.Equals(memory.Type)).ToList();
         foreach (var cp in cpu)
         {
-            foreach (var mb in _component.Motherboards)
-            {
-                if (cp.Socket.Equals(mb.Socket))
-                {
-                    motherboard.Add(mb);
-                }
-            }
+            motherboard = _component.Motherboards.FindAll(mb 
+                => cp.Socket.Equals(mb.Socket)).ToList();
         }
 
         int comb = 0;
@@ -273,40 +227,27 @@ public class Store
                     sb.AppendLine(cp.ToString() + " ");
                     sb.AppendLine(mb.ToString() + " ");
                     sb.AppendLine(memory.ToString());
-                    sb.AppendLine("Price: " + calculatePrice(cp.Price, memory.Price, mb.Price) +"\n");
+                    sb.AppendLine("Price: " + calculatePrice(cp.Price, memory.Price, mb.Price) + "\n");
                     comb++;
                 }
             }
         }
-        
-        return  "There are "+ comb + " possible combinations:\n" + sb.ToString();
+
+        return "There are " + comb + " possible combinations:\n" + sb.ToString();
     }
-    
+
     private string search(Motherboard motherboard)
     {
-        List<CPU> cpu  = new List<CPU>();
         List<Memory> memory = new List<Memory>();
         StringBuilder sb = new StringBuilder();
         
-        foreach (var cp in _component.CPUs)
-        {
-            if (motherboard.Socket.Equals(cp.Socket))
-            {
-                cpu.Add(cp);
-            }
-        }
-        
+        var cpu = _component.CPUs.FindAll(cp => cp.Socket.Equals(motherboard.Socket)).ToList();
+
         foreach (var cp in cpu)
         {
-            foreach (var mem in _component.Memory)
-            {
-                if (cp.SupportedMemory.Equals(mem.Type))
-                {
-                    memory.Add(mem);
-                }
-            }
+            memory = _component.Memory.FindAll(mem => cp.SupportedMemory.Equals(mem.Type)).ToList();
         }
-        
+
         int comb = 0;
         int num = 0;
         foreach (var cp in cpu)
@@ -320,12 +261,12 @@ public class Store
                     sb.AppendLine(cp.ToString() + " ");
                     sb.AppendLine(motherboard.ToString() + " ");
                     sb.AppendLine(mem.ToString());
-                    sb.AppendLine("Price: " + calculatePrice(cp.Price, mem.Price, motherboard.Price) +"\n");
+                    sb.AppendLine("Price: " + calculatePrice(cp.Price, mem.Price, motherboard.Price) + "\n");
                     comb++;
                 }
             }
         }
-        
-        return  "There are "+ comb + " possible combinations:\n" + sb.ToString();
+
+        return "There are " + comb + " possible combinations:\n" + sb.ToString();
     }
 }
